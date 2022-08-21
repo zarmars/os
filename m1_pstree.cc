@@ -108,7 +108,7 @@ class PsTree {
     os_int ppid{-1};
 
     std::string line;
-    while(std::getline(proc_status, line, "\n")) {
+    while(std::getline(proc_status, line, '\n')) {
       std::string::size_type comma_pos = line.find(":");
       if (comma_pos == std::string::npos) {
         continue;
@@ -175,7 +175,7 @@ class PsTree {
       if (node->IsRoot()) {
         continue;
       }
-      if (nodes_map_.find(node->ppid) == nodes_map.end()) {
+      if (nodes_map_.find(node->ppid) == nodes_map_.end()) {
         std::cout << "Unable to find parent node for: "
             << node->name << std::endl;
         return;
@@ -185,9 +185,48 @@ class PsTree {
     }
   }
 
+  void SortTree() {
+    // sort child nodes by their pids.
+  }
+
   // pre-order traverse of pstree.
-  void PrintTree(bool show_pids, bool numeric_sort = false) const {
-    std::cout << "TODO...";
+  void PrintTree(bool show_pids) const {
+    std::vector<int> edges;
+    PrintTree(root_, edges, show_pids);
+  }
+
+  void PrintTree(
+    TreeNode* node, std::vector<int>& edges, bool show_pids) const {
+    if (node == nullptr) {
+      return;
+    }
+    // print node branch edge if necessary
+    int index = 0;
+    for (int edge : edges) {
+      for(; index < edge; index++) {
+        std::cout << " ";
+      }
+      std::cout << "|";
+      index++;
+    }
+    if (!edges.empty()) {
+      std::cout << "___";
+    }
+    std::string node_str = node->DebugString(show_pids);
+    std::cout << node_str;
+    index += node_str.length();
+    if (!node->child_nodes.empty()) {
+      std::cout << "---";
+      index += 3;
+      edges.push_back(index);
+      std::cout << "---";
+    }
+    for (int cid = 0; cid < node->child_nodes.size(); cid++) {
+      PrintTree(node->child_nodes[cid], edges, show_pids);
+      if (cid == 0) {
+        std::cout << std::endl;
+      }
+    }
   }
 
  private:
@@ -198,10 +237,6 @@ class PsTree {
 
 void PrintVersion() {
   std::cout << "my_pstree v1.0." << std::endl;
-}
-
-void RunPstree(bool show_pids, bool numeric_sort) {
-  std::cout << "Implement later." << std::endl;
 }
 
 bool IsProcDir(std::string& dir_name) {
@@ -240,7 +275,18 @@ void ReadProcs(const std::string &dir_fpath,
   closedir(dirp);
 }
 
-
+void RunPstree(bool show_pids, bool numeric_sort = false) {
+  std::string dir_fpath("/proc");
+  std::string status_file("status");
+  std::vector<std::string> files;
+  ReadProcs(dir_fpath, status_file, &files);
+  PsTree pstree;
+  pstree.BuildTree(files);
+  if (numeric_sort) {
+    pstree.SortTree();
+  }
+  pstree.PrintTree(show_pids);
+}
 
 } // namespace m1
 } // namespace os
